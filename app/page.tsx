@@ -1,101 +1,135 @@
-import Image from "next/image";
+"use client"
+
+import { useState, useRef, useEffect } from "react"
+import { X } from 'lucide-react'
+import CategoryButton from "@/components/CategoryButton"
+import ProductList from "@/components/ProductList"
+import HotPromotion from "@/components/HotPromotion"
+
+const categories = [
+  { id: "hot", name: "Khuyến mãi hot" },
+  ...Array(10).fill(null).map((_, i) => ({ 
+    id: `category-${i}`, 
+    name: `MenuItem ${i + 1}`
+  }))
+]
+
+const productLists = categories.map(category => ({
+  id: category.id,
+  title: category.name,
+  products: Array(12).fill(null).map((_, i) => ({
+    id: `${category.id}-product-${i}`,
+    name: "Menuitem Name m...",
+    imageUrl: "/assets/images/placeholder.svg"
+  }))
+}))
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [selectedCategory, setSelectedCategory] = useState(categories[0].id)
+  const contentRef = useRef<HTMLDivElement>(null)
+  const categoryRef = useRef<HTMLDivElement>(null)
+  const observerRef = useRef<IntersectionObserver | null>(null)
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+	useEffect(() => {
+		console.log(selectedCategory)
+	}, [selectedCategory])
+
+  useEffect(() => {
+    if (!contentRef.current) return
+
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        const visibleSection = entries.find(
+          (entry) => entry.isIntersecting && entry.intersectionRatio >= 0.5
+        )
+        if (visibleSection?.target.id) {
+          setSelectedCategory(visibleSection.target.id)
+          scrollCategoryIntoView(visibleSection.target.id)
+        }
+      },
+      {
+        root: contentRef.current,
+        threshold: 0.5,
+      }
+    )
+
+    const sections = contentRef.current.getElementsByClassName("product-section")
+    Array.from(sections).forEach((section) => {
+      observerRef.current?.observe(section)
+    })
+
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect()
+      }
+    }
+  }, [])
+
+  const scrollToCategory = (categoryId: string) => {
+    const targetElement = document.getElementById(categoryId)
+    if (targetElement && contentRef.current) {
+      contentRef.current.scrollTo({
+        top: targetElement.offsetTop - contentRef.current.offsetTop,
+        behavior: "smooth"
+      })
+    }
+  }
+
+  const scrollCategoryIntoView = (categoryId: string) => {
+    if (categoryRef.current) {
+      const categoryButton = categoryRef.current.querySelector(`[data-category-id="${categoryId}"]`)
+      if (categoryButton) {
+        categoryButton.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest',
+          inline: 'start'
+        })
+      }
+    }
+  }
+
+  return (
+		<div className="w-[400px] h-[calc(100vh-2rem)] flex flex-col bg-white rounded-t-2xl overflow-hidden border border-neutral-200 shadow-lg dark:border-neutral-800">
+			<div className="flex items-center px-4 py-3 border-b border-gray-200">
+				<button className="hover:bg-gray-100 p-1 rounded-full">
+					<X className="h-5 w-5 text-gray-600" />
+				</button>
+				<p className="flex-1 text-center text-lg font-medium">
+					Danh mục Kingfoodmart
+				</p>
+			</div>
+
+			<div className="flex flex-1 overflow-hidden p-2">
+				<div
+					ref={categoryRef}
+					className="overflow-y-auto border-r border-gray-200"
+				>
+					{categories.map((category) => (
+						<CategoryButton
+							key={category.id}
+							{...category}
+							isSelected={selectedCategory === category.id}
+							onClick={() => scrollToCategory(category.id)}
+						/>
+					))}
+				</div>
+
+				<div ref={contentRef} className="flex-1 overflow-y-auto">
+					{productLists.map((list) => (
+						<div
+							key={list.id}
+							id={list.id}
+							className={`product-section p-4 ${
+								selectedCategory === list.id ? "bg-blue-50" : ""
+							}`}
+						>
+							<ProductList {...list} />
+							{list.id === "hot" && <HotPromotion />}
+						</div>
+					))}
+				</div>
+			</div>
+		</div>
   );
 }
+
